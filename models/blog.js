@@ -3,48 +3,46 @@ const Joi = require("joi");
 
 const Blog = mongoose.model(
   "Blog",
-  new mongoose.Schema({
-    title: {
-      type: String,
-      minlength: 3,
-      maxlength: 499,
-      required: true,
+  new mongoose.Schema(
+    {
+      title: {
+        type: String,
+        minlength: 3,
+        maxlength: 499,
+        required: true,
+      },
+      excerpt: {
+        type: String,
+        minlength: 3,
+        maxlength: 100,
+        required: true,
+      },
+      message: {
+        type: String,
+        minlength: 50,
+        required: true,
+      },
+      picOne: {
+        imageUrl: String,
+        public_id: String,
+        contentType: String,
+        // required: true
+      },
+      picTwo: {
+        imageUrl: String,
+        public_id: String,
+        contentType: String,
+        // required: true
+      },
+      category: {
+        type: Array,
+        // minlength: 3,
+        // maxlength: 20,
+        // required: true,
+      },
     },
-    excerpt: {
-      type: String,
-      minlength: 3,
-      maxlength: 100,
-      required: true,
-    },
-    message: {
-      type: String,
-      minlength: 50,
-      required: true,
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now(),
-      required: true,
-    },
-    picOne: {
-      imageUrl: String,
-      public_id: String,
-      contentType: String,
-      // required: true
-    },
-    picTwo: {
-      imageUrl: String,
-      public_id: String,
-      contentType: String,
-      // required: true
-    },
-    category: {
-      type: Array,
-      // minlength: 3,
-      // maxlength: 20,
-      // required: true,
-    },
-  })
+    { timestamps: true }
+  )
 );
 
 const validateBlog = (blog) => {
@@ -60,4 +58,3 @@ const validateBlog = (blog) => {
 
 exports.Blog = Blog;
 exports.validateBlog = validateBlog;
-

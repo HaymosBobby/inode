@@ -10,10 +10,10 @@ router.get("/", async (req, res) => {
   res.send(podcast);
 });
 
-router.post("/", upload, async (req, res) => {
+router.post("/", async (req, res) => {
   try {
 
-    if (!req.body && !req.file) return res.status(400).send("No input set");
+    if (!req.body) return res.status(400).send("No input set");
   
     const { error, value } = validatePodcast(req.body);
     if (error) return res.status(400).send(error.details[0].message);
@@ -28,12 +28,12 @@ router.post("/", upload, async (req, res) => {
     // }
   
     // console.log(req.file);
-    // console.log(req.body);
+    console.log(value);
   
     const newPodcast = new Podcast({
       title: value.title,
       excerpt: value.excerpt,
-      podcast: req.file.filename,
+      podcastUrl: value.podcastUrl,
       // podcast: {
       //   data: fs.readFileSync("public/podcasts/" + req.file.filename),
       //   contentType: req.file.mimetype
@@ -50,7 +50,7 @@ router.post("/", upload, async (req, res) => {
       //   console.log(err);
       // });
   
-    res.send(newPodcast);
+    res.status(200).send(newPodcast);
   } catch(ex) {
     console.log(ex);
     res.status(400).send(ex, "An error occured")

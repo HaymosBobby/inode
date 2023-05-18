@@ -30,15 +30,15 @@ router.post("/", upload, async (req, res) => {
       const newProgram = new Program({
         program: value.program,
         desc: value.desc,
-        picOne: {
+        pic: {
           imageUrl: data.url,
           public_id: data.public_id,
-          contentType: req.files.mimetype,
+          contentType: req.file.mimetype,
         },
       });
 
-      await newProgram.save();
-      res.send(newProgram);
+      const savedProgram = await newProgram.save();
+      res.status(200).send(savedProgram);
     }
   } catch (ex) {
     console.log(ex);

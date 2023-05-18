@@ -5,13 +5,14 @@ const crypto = require("crypto");
 const connection = require("../connections/connection");
 const path = require("path");
 
-connection;
-
-const conn = mongoose.createConnection(process.env.MONGO_URI);
-conn.once("open", () => {
-  let gfs = Grid(conn.db, mongoose.mongo);
-  gfs.collection("podcasts");
+connection().then(() => {
+  const conn = mongoose.createConnection(process.env.MONGO_URI);
+  conn.once("open", () => {
+    let gfs = Grid(conn.db, mongoose.mongo);
+    gfs.collection("podcasts");
+  });
 });
+
 
 const storage = new GridFsStorage({
   url: process.env.MONGO_URI,

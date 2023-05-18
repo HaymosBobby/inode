@@ -1,5 +1,5 @@
 const multer = require("multer");
-const storage = require("../gridfs/podcastGrid")
+// const storage = require("../gridfs/podcastGrid")
 
 // const storage = multer.diskStorage({
 //   destination: (req, file, cb) => {
@@ -20,7 +20,7 @@ const storage = require("../gridfs/podcastGrid")
 // });
 
 const upload = multer({
-  storage: storage,
+  // storage: storage,
   fileFilter: (req, file, cb) => {
     if (file.mimetype === "audio/mpeg") {
       cb(null, true);
