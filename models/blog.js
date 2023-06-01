@@ -40,6 +40,11 @@ const Blog = mongoose.model(
         // maxlength: 20,
         // required: true,
       },
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+      }
     },
     { timestamps: true }
   )

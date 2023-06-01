@@ -15,6 +15,7 @@ const blogs = require("./routes/blogs");
 const podcasts = require("./routes/podcasts");
 const programs = require("./routes/programs");
 const users = require("./routes/users");
+const auth = require("./routes/auth");
 
 // const dns = require('dns');
 
@@ -33,12 +34,13 @@ if (!config.get("jwtPrivateKey")) {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors({"exposedHeaders": "X-Auth-Token" }));
 
 app.use("/api/imedia-blogs", blogs);
 app.use("/api/imedia-podcasts", podcasts);
 app.use("/api/imedia-programs", programs);
 app.use("/api/imedia-users", users);
+app.use("/api/imedia-auth", auth);
 
 // const connection = () => {
 //   try {

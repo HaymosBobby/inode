@@ -2,34 +2,45 @@ const express = require("express");
 const router = express.Router();
 const { Podcast, validatePodcast } = require("../models/podcast");
 const upload = require("../middleware/podcast_upload");
+const auth = require("../middleware/auth");
 
 // const { uploadToCloudinary } = require("../cloud/cloudinary");
 
 router.get("/", async (req, res) => {
-  const podcast = await Podcast.find().sort("-createdAt");
+  try {
+    const podcast = await Podcast.find().sort("-createdAt");
+    res.send(podcast);
+  } catch (ex) {
+    console.log(ex);
+    res.status(400).send(ex, "An error occured");
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  const id = req.params.id;
+  const podcast = await Podcast.findById(id);
   res.send(podcast);
 });
 
 router.post("/", async (req, res) => {
   try {
-
     if (!req.body) return res.status(400).send("No input set");
-  
+
     const { error, value } = validatePodcast(req.body);
     if (error) return res.status(400).send(error.details[0].message);
-  
+
     // console.log(req.file.path);
-  
+
     // try {
     //   const data = await uploadToCloudinary(req.file.path, "Imedia_podcast")
     //   console.log(data);
     // } catch (err) {
     //   console.log(err);
     // }
-  
+
     // console.log(req.file);
     console.log(value);
-  
+
     const newPodcast = new Podcast({
       title: value.title,
       excerpt: value.excerpt,
@@ -39,21 +50,21 @@ router.post("/", async (req, res) => {
       //   contentType: req.file.mimetype
       // }
     });
-  
+
     // fs.unlinkSync("public/podcasts/" + req.file.filename);
-  
-    await newPodcast.save()
-      // .then((res) => {
-      //   console.log(res);
-      // })
-      // .catch((err) => {
-      //   console.log(err);
-      // });
-  
+
+    await newPodcast.save();
+    // .then((res) => {
+    //   console.log(res);
+    // })
+    // .catch((err) => {
+    //   console.log(err);
+    // });
+
     res.status(200).send(newPodcast);
-  } catch(ex) {
+  } catch (ex) {
     console.log(ex);
-    res.status(400).send(ex, "An error occured")
+    res.status(400).send(ex, "An error occured");
   }
 });
 

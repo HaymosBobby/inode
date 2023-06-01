@@ -52,6 +52,7 @@ router.post("/", upload, async (req, res) => {
           public_id: photos[1].public_id,
           contentType: req.files.image2[0].mimetype,
         },
+        userId: value.userId
       });
 
       await newBlog.save();

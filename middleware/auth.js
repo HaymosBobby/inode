@@ -9,8 +9,13 @@ module.exports = ( req, res, next) => {
   try {
     const decoded = jwt.verify(token, config.get("jwtPrivateKey"));
     req.user = decoded;
+
+    if (req.user.id === req.params.id || req.user.isAdmin) {
+      next();
+    } else {
+      res.status(403).send("Forbidden!");
+    }
     // console.log(decoded);
-    next();
   } catch(ex) {
     res.status(400).send("Invalid Token");
   }
