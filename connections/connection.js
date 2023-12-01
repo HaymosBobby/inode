@@ -11,11 +11,3 @@ const connection = async () => {
 };
 
 module.exports = connection;
-
-/*
-useNewUrlParser: true,
-useFindAndModify: false,
-useUnifiedTopology: true,
-bufferCommands: false,
-autoIndex: false,
-}*/

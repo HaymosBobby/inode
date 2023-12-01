@@ -1,9 +1,9 @@
-const mongoose = require("mongoose");
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
 const config = require("config");
+const { Schema, Types, model } = require("mongoose");
 
-const userSchema = new mongoose.Schema(
+const userSchema = new Schema(
   {
     username: {
       type: String,
@@ -19,22 +19,35 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    profilePic: {
+    profilePicUrl: {
       type: String,
+      default: "",
     },
     isAdmin: {
       type: Boolean,
       default: false,
     },
-    blog: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Blog",
-      required: true,
+    blogs: {
+      type: [
+        {
+          blogId: {
+            type: Types.ObjectId,
+            ref: "Blog",
+          },
+        },
+      ],
+      default: [],
     },
-    podcast: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Podcast",
-      required: true,
+    podcasts: {
+      type: [
+        {
+          podcastId: {
+            type: Types.ObjectId,
+            ref: "Blog",
+          },
+        },
+      ],
+      default: [],
     },
   },
   { timestamps: true }
@@ -47,12 +60,13 @@ userSchema.methods.generateAuthToken = function () {
   );
 };
 
-const User = mongoose.model("User", userSchema);
+const User = model("User", userSchema);
 
 const validateUser = (user) => {
   const schema = Joi.object({
-    username: Joi.string().required(),
+    username: Joi.string().min(3).required(),
     email: Joi.string().email().required(),
+    profilePicUrl: Joi.string(),
     password: Joi.string()
       .pattern(new RegExp("^[a-zA-Z0-9]{3,30}$"))
       .required(),

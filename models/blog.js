@@ -1,9 +1,11 @@
-const mongoose = require("mongoose");
-const Joi = require("joi");
+const { Schema, Types, model } = require("mongoose");
 
-const Blog = mongoose.model(
+const Joi = require("joi");
+Joi.objectId = require("joi-objectid")(Joi);
+
+const Blog = model(
   "Blog",
-  new mongoose.Schema(
+  new Schema(
     {
       title: {
         type: String,
@@ -11,40 +13,43 @@ const Blog = mongoose.model(
         maxlength: 499,
         required: true,
       },
+
       excerpt: {
         type: String,
         minlength: 3,
         maxlength: 100,
         required: true,
       },
+
       message: {
         type: String,
         minlength: 50,
         required: true,
       },
-      picOne: {
-        imageUrl: String,
-        public_id: String,
-        contentType: String,
-        // required: true
+
+      picOneURL: {
+        type: String,
+        minlength: 8,
+        required: true,
       },
-      picTwo: {
-        imageUrl: String,
-        public_id: String,
-        contentType: String,
-        // required: true
+
+      picTwoURL: {
+        type: String,
+        minlength: 8,
+        required: true,
       },
-      category: {
+
+      categories: {
         type: Array,
-        // minlength: 3,
-        // maxlength: 20,
-        // required: true,
+        required: true,
+        validate: [(v) => v.length >= 1, "At least one category is required!"],
       },
+
       userId: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Types.ObjectId,
         ref: "User",
-        required: true
-      }
+        required: true,
+      },
     },
     { timestamps: true }
   )
@@ -55,7 +60,10 @@ const validateBlog = (blog) => {
     title: Joi.string().min(3).max(100).required(),
     excerpt: Joi.string().min(10).max(100).required(),
     message: Joi.string().min(50).required(),
-    // category: Joi.string().min(3).max(20).required(),
+    // picOneUrl: Joi.string().min(8).required(),
+    // picTwoUrl: Joi.string().min(8).required(),
+    userId: Joi.objectId().required(),
+    categories: Joi.array().items(Joi.string().required()),
   });
 
   return schema.validate(blog);

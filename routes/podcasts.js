@@ -1,70 +1,178 @@
-const express = require("express");
-const router = express.Router();
+const router = require("express").Router();
 const { Podcast, validatePodcast } = require("../models/podcast");
-const upload = require("../middleware/podcast_upload");
-const auth = require("../middleware/auth");
+const path = require("path");
 
-// const { uploadToCloudinary } = require("../cloud/cloudinary");
+const admin = require("../middleware/admin");
+const { uploadFile, deleteFile } = require("../firebase/firebase");
+const { Types } = require("mongoose");
+const upload = require("../middleware/podcast_upload");
 
 router.get("/", async (req, res) => {
   try {
-    const podcast = await Podcast.find().sort("-createdAt");
-    res.send(podcast);
-  } catch (ex) {
-    console.log(ex);
-    res.status(400).send(ex, "An error occured");
+    const podcasts = await Podcast.find()
+      .populate("programId", "picURL")
+      .sort("-createdAt");
+
+    if (podcasts && podcasts.length <= 0)
+      return res.status(404).send({ message: "No Podcasts found!." });
+
+    res.status(200).send({ data: podcasts, message: "Success!." });
+  } catch (error) {
+    res.status(500).send({ message: error.message, Error: error });
+    console.log(error.message);
   }
 });
 
 router.get("/:id", async (req, res) => {
   const id = req.params.id;
-  const podcast = await Podcast.findById(id);
-  res.send(podcast);
+
+  try {
+    const podcast = await Podcast.findById(id).populate("programId", "picURL");
+
+    if (!podcast)
+      return res.status(404).send({ message: "No Podcast found!." });
+    res.status(200).send({ data: podcast, message: "Success!." });
+  } catch (error) {
+    res.status(500).send({ message: error.message, Error: error });
+    console.log(error.message);
+  }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", upload, admin, async (req, res) => {
   try {
-    if (!req.body) return res.status(400).send("No input set");
+    // Check for the existence of input data
+    if (!req.body || !req.file)
+      return res.status(400).send({ message: "No input set" });
 
+    // Validate input data
     const { error, value } = validatePodcast(req.body);
-    if (error) return res.status(400).send(error.details[0].message);
+    if (error)
+      return res.status(400).send({ message: error.details[0].message });
 
-    // console.log(req.file.path);
+    // Upload files to storage
+    const file = req.file;
 
-    // try {
-    //   const data = await uploadToCloudinary(req.file.path, "Imedia_podcast")
-    //   console.log(data);
-    // } catch (err) {
-    //   console.log(err);
-    // }
+    const url = await uploadFile(file, "podcasts");
 
-    // console.log(req.file);
-    console.log(value);
-
+    // Create new Podcast
     const newPodcast = new Podcast({
       title: value.title,
       excerpt: value.excerpt,
-      podcastUrl: value.podcastUrl,
-      // podcast: {
-      //   data: fs.readFileSync("public/podcasts/" + req.file.filename),
-      //   contentType: req.file.mimetype
-      // }
+      podcastURL: url,
+      podcastSize: file.size,
+      programId: new Types.ObjectId(value.programId),
+      userId: new Types.ObjectId(value.userId),
     });
 
-    // fs.unlinkSync("public/podcasts/" + req.file.filename);
+    // Save Podcast to database
+    const savedPodcast = await newPodcast.save();
 
-    await newPodcast.save();
-    // .then((res) => {
-    //   console.log(res);
-    // })
-    // .catch((err) => {
-    //   console.log(err);
-    // });
+    res
+      .status(200)
+      .send({ data: savedPodcast, message: "Podcast created successfully!." });
+  } catch (error) {
+    res.status(500).send({ message: error.message, Error: error });
+    console.log(error.message);
+  }
+});
 
-    res.status(200).send(newPodcast);
-  } catch (ex) {
-    console.log(ex);
-    res.status(400).send(ex, "An error occured");
+router.put("/:id", upload, admin, async (req, res) => {
+  const id = req.params.id;
+  // console.log(req.body);
+  // console.log(req.file);
+
+  try {
+    // Check for existence of podcast
+    const podcast = await Podcast.findById(id);
+    if (!podcast)
+      return res.status(404).send({ message: "Podcast not found!." });
+
+    // Check for existence of  input data.
+    if (!req.body) return res.status(400).send({ message: "No input set" });
+
+    // Validate Input
+    const { error, value } = validatePodcast(req.body);
+    if (error)
+      return res.status(400).send({ message: error.details[0].message });
+
+    // Check for file
+    let updatedPodcast;
+    if (req.file) {
+      const file = req.file;
+      const url = await uploadFile(file, "podcasts");
+
+      // Delete the old podcastURL from store
+      const urlObj = new URL(podcast.podcastURL);
+      const folder = "podcasts";
+      const fileName = decodeURIComponent(path.basename(urlObj.pathname));
+      const filePath = `${folder}/${fileName}`;
+
+      await deleteFile(filePath);
+
+      // Create updated podcast
+      updatedPodcast = {
+        title: value.title,
+        excerpt: value.excerpt,
+        podcastURL: url,
+        podcastSize: file.size,
+        userId: new Types.ObjectId(value.userId),
+        programId: new Types.ObjectId(value.programId),
+      };
+    } else {
+      updatedPodcast = {
+        title: value.title,
+        excerpt: value.excerpt,
+        podcastURL: podcast.podcastURL,
+        podcastSize: podcast.size,
+        userId: new Types.ObjectId(value.userId),
+        programId: new Types.ObjectId(value.programId),
+      };
+    }
+
+    // Update in the database
+    updatedPodcast = await Podcast.updateOne(
+      { _id: id },
+      { $set: updatedPodcast }
+    );
+
+    res.status(200).send({
+      data: updatedPodcast,
+      message: "Podcast updated successfully!.",
+    });
+  } catch (error) {
+    res.status(500).send({ message: error.message, Error: error });
+    console.log(error.message);
+  }
+});
+
+router.delete("/:id", admin, async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    let podcast = await Podcast.findById(id);
+
+    if (!podcast)
+      return res
+        .status(404)
+        .send({ message: "The podcast specified is not avilable" });
+
+    // Delete the old podcastURL from store
+    const urlObj = new URL(podcast.podcastURL);
+    const folder = "podcasts";
+    const fileName = decodeURIComponent(path.basename(urlObj.pathname));
+    const filePath = `${folder}/${fileName}`;
+
+    await deleteFile(filePath);
+
+    // Delete from database
+    podcast = await Podcast.findByIdAndDelete(id);
+
+    res
+      .status(200)
+      .send({ data: podcast, message: "Podcast deleted successfully" });
+  } catch (error) {
+    res.status(500).send({ message: error.message, Error: error });
+    console.log(error);
   }
 });
 

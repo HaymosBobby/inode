@@ -1,80 +1,221 @@
-const express = require("express");
-const router = express.Router();
+const router = require("express").Router();
 const { Blog, validateBlog } = require("../models/blog");
-// const fs = require("fs");
+const admin = require("../middleware/admin");
 const upload = require("../middleware/blog_upload");
-const { uploadToCloudinary } = require("../cloud/cloudinary");
+const { Types } = require("mongoose");
+const { uploadFile, deleteFile } = require("../firebase/firebase");
+const path = require("path");
+
+const folder = "postImages";
 
 router.get("/", async (req, res) => {
-  const blogs = await Blog.find().sort("-createdAt");
-  res.send(blogs);
+  try {
+    const blogs = await Blog.find()
+      .populate("userId", "username")
+      .sort("-createdAt");
+
+    if (blogs && blogs.length <= 0)
+      return res.status(404).send("No Blogs found!.");
+
+    res.status(200).send({ data: blogs, message: "Success" });
+  } catch (error) {
+    res.status(500).send({ message: error.message, Error: error });
+    console.log(error.message);
+  }
 });
 
 router.get("/:id", async (req, res) => {
   const id = req.params.id;
-  const blog = await Blog.findById(id);
-  if (!blog)
-    res.status(404).send("The blog with the given id is not available");
 
-  res.send(blog);
+  try {
+    const blog = await Blog.findById(id).populate("userId", "username");
+    if (!blog) return res.status(404).send("No Blog found!.");
+
+    res.status(200).send({ data: blog, message: "Success" });
+  } catch (error) {
+    res.status(500).send({ message: error.message, Error: error });
+    console.log(error.message);
+  }
 });
 
-router.post("/", upload, async (req, res) => {
+router.post("/", upload, admin, async (req, res) => {
   try {
-    if (!req.body && !req.files) return res.status(400).send("No input set");
+    // Check for existence of input data.
+    if (!req.body || !req.files) return res.status(400).send("No input set");
 
+    // Validate Input
     const { error, value } = validateBlog(req.body);
     if (error) return res.status(400).send(error.details[0].message);
 
-    const imagePaths = [req.files.image1[0].path, req.files.image2[0].path];
-    let photos = [];
-    for (let imagePath of imagePaths) {
-      const data = await uploadToCloudinary(imagePath, "Imedia_images");
-      photos.push(data);
+    // Upload files to storage
+    let urls = [];
+    if (Object.entries(req.files).length !== 2)
+      return res.status(400).send({ message: "Two files required!!" });
 
-      // fs.unlinkSync(imagePath);
+    const files = [req.files.image1[0], req.files.image2[0]];
+
+    for (let file of files) {
+      const response = await uploadFile(file, folder);
+      urls.push(response);
     }
 
-    if (photos.length === 0 && photos.includes(undefined)) {
-      return res.status(404).send("An error occured");
-    } else {
-      const newBlog = new Blog({
+    // Create new blog
+    const newBlog = new Blog({
+      title: value.title,
+      excerpt: value.excerpt,
+      message: value.message,
+      categories: value.categories,
+      picOneURL: urls[0],
+      picTwoURL: urls[1],
+      userId: new Types.ObjectId(value.userId),
+    });
+
+    // Save to Database
+    const savedBlog = await newBlog.save();
+    res
+      .status(200)
+      .send({ data: savedBlog, message: "Post created successfully!." });
+  } catch (error) {
+    res.status(500).json({ message: error.message, Error: error });
+    console.log(error.message);
+  }
+});
+
+router.put("/:id", upload, admin, async (req, res) => {
+  console.log(req.body);
+  console.log(req.files);
+  console.log(req.files.image2);
+  const id = req.params.id;
+  try {
+    // Check for existence of blog
+    const blog = await Blog.findById(id);
+    if (!blog) return res.status(404).send("Blog not found!.");
+
+    // Check for existence of  input data.
+    if (!req.body) return res.status(400).send("No input set");
+
+    // Validate Input
+    const { error, value } = validateBlog(req.body);
+    if (error) return res.status(400).send(error.details[0].message);
+
+    // Create updated blog
+    let updatedBlog;
+    // Check for existence files
+    if (req.files && Object.entries(req.files).length === 2) {
+      const files = [req.files.image1[0], req.files.image2[0]];
+      let urls = [];
+
+      for (let file of files) {
+        const response = await uploadFile(file, folder);
+        urls.push(response);
+      }
+
+      // Delete the old postURLs from store
+      const picUrls = [blog.picOneURL, blog.picTwoURL];
+
+      for (let url of picUrls) {
+        const urlObj = new URL(url);
+        const fileName = decodeURIComponent(path.basename(urlObj.pathname));
+        const filePath = `${folder}/${fileName}`;
+        await deleteFile(filePath);
+      }
+
+      updatedBlog = {
         title: value.title,
         excerpt: value.excerpt,
         message: value.message,
-        picOne: {
-          imageUrl: photos[0].url,
-          public_id: photos[0].public_id,
-          contentType: req.files.image1[0].mimetype,
-        },
-        picTwo: {
-          imageUrl: photos[1].url,
-          public_id: photos[1].public_id,
-          contentType: req.files.image2[0].mimetype,
-        },
-        userId: value.userId
-      });
+        picOne: urls[0],
+        picTwo: urls[1],
+        userId: new Types.ObjectId(value.userId),
+      };
+    } else if (req.files && Object.entries(req.files).length === 1) {
+      if (req.files.image1) {
+        let file = req.files.image1[0];
+        const url = await uploadFile(file, folder);
 
-      await newBlog.save();
-      res.send(newBlog);
+        // Delete the old postURL from store
+        const urlObj = new URL(blog.picOneURL);
+        const fileName = decodeURIComponent(path.basename(urlObj.pathname));
+        const folder = "postImages";
+        const filePath = `${folder}/${fileName}`;
+        await deleteFile(filePath);
+
+        updatedBlog = {
+          title: value.title,
+          excerpt: value.excerpt,
+          message: value.message,
+          picOne: url,
+          picTwo: blog.picTwoURL,
+          userId: new Types.ObjectId(value.userId),
+        };
+      } else {
+        let file = req.files.image2[0];
+        const url = await uploadFile(file, folder);
+
+        // Delete the old postURL from store
+        const urlObj = new URL(blog.picTwoURL);
+        const fileName = decodeURIComponent(path.basename(urlObj.pathname));
+        const filePath = `${folder}/${fileName}`;
+        await deleteFile(filePath);
+
+        updatedBlog = {
+          title: value.title,
+          excerpt: value.excerpt,
+          message: value.message,
+          picOne: blog.picOneURL,
+          picTwo: url,
+          userId: new Types.ObjectId(value.userId),
+        };
+      }
+    } else {
+      updatedBlog = {
+        title: value.title,
+        excerpt: value.excerpt,
+        message: value.message,
+        picOne: blog.picOneURL,
+        picTwo: blog.picTwoURL,
+        userId: new Types.ObjectId(value.userId),
+      };
     }
-  } catch (ex) {
-    console.log(ex);
+
+    // Update in the database
+    updatedBlog = await Blog.updateOne({ _id: id }, { $set: updatedBlog });
+
+    res
+      .status(200)
+      .send({ data: updatedBlog, message: "Blog updated successfully!." });
+  } catch (error) {
+    res.status(500).send({ message: error.message, Error: error });
+    console.log(error.message);
   }
 });
 
 router.delete("/:id", async (req, res) => {
   const id = req.params.id;
-  // const genre = validateInput(id);
+  try {
+    let blog = await Blog.findById(id);
 
-  const blog = await Blog.findByIdAndDelete(id);
+    if (!blog)
+      return res.status(404).send("The blog specified is not avilable");
 
-  if (!blog) return res.status(400).send("The blog specified is not avilable");
+    // Delete the old postURLs from store
+    const urls = [blog.picOneURL, blog.picTwoURL];
 
-  // const index = genres.indexOf(genre);
-  // genres.splice(index, 1);
+    for (let url of urls) {
+      const urlObj = new URL(url);
+      const fileName = decodeURIComponent(path.basename(urlObj.pathname));
+      const filePath = `${folder}/${fileName}`;
+      await deleteFile(filePath);
+    }
 
-  res.send(blog);
+    // Delete podcast from db
+    blog = await Blog.findByIdAndDelete(id);
+
+    res.status(200).send({ data: blog, message: "Blog deleted successfully" });
+  } catch (error) {
+    res.status(500).send({ message: error.message, Error: error });
+    console.log(error.message);
+  }
 });
 
 module.exports = router;

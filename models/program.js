@@ -1,9 +1,10 @@
-const mongoose = require("mongoose");
 const Joi = require("joi");
+const { model, Schema } = require("mongoose");
+Joi.objectId = require("joi-objectid")(Joi);
 
-const Program = mongoose.model(
+const Program = model(
   "Program",
-  new mongoose.Schema(
+  new Schema(
     {
       program: {
         type: String,
@@ -17,11 +18,14 @@ const Program = mongoose.model(
         maxlength: 100,
         required: true,
       },
-      pic: {
-        imageUrl: String,
-        public_id: String,
-        contentType: String,
-        // required: true
+      anchor: {
+        type: String,
+        required: true,
+      },
+      picURL: {
+        type: String,
+        minlength: 8,
+        required: true,
       },
     },
     { timestamps: true }
@@ -31,7 +35,9 @@ const Program = mongoose.model(
 const validateProgram = (program) => {
   const schema = Joi.object({
     program: Joi.string().min(3).max(100).required(),
+    anchor: Joi.string().required(),
     desc: Joi.string().min(3).max(100).required(),
+    userId: Joi.objectId().required(),
   });
 
   return schema.validate(program);
