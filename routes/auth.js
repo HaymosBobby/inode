@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const router = require("express").Router();
 const { validateUser, User, validateResetDetails } = require("../models/user");
 const validateLoginDetails = require("../models/auth");
-const { transporter } = require("../mailchimp/mailchimp");
+const { transporter } = require("../mailgun/mailgun");
 const { Types } = require("mongoose");
 
 // Register
@@ -12,8 +12,9 @@ router.post("/register", async (req, res) => {
   try {
     // Validate user Inputs
     const { error, value } = validateUser(req.body);
-    console.log(error);
+
     if (error) return res.status(400).send({ message: error.message });
+
     const { username, email, password } = value;
 
     // Check if user already exists
@@ -62,7 +63,6 @@ router.post("/login", async (req, res) => {
   try {
     // Validate user Inputs
     const { error, value } = validateLoginDetails(req.body);
-    console.log(error.message);
     if (error) return res.status(400).send(error.message);
     const { log, password } = value;
 
@@ -71,13 +71,16 @@ router.post("/login", async (req, res) => {
       $or: [{ username: log }, { email: log }],
     });
 
-    if (!user) return res.status(401).send("Invalid Username or Password");
+    if (!user)
+      return res.status(401).send({ message: "Invalid Username or Password!" });
 
     // Decode user password
     const decryptedPassword = await bcrypt.compare(password, user.password);
 
     if (!decryptedPassword)
-      return res.status(401).send("Invalid Username or Password!!!");
+      return res
+        .status(401)
+        .send({ message: "Invalid Username or Password!" });
 
     const token = user.generateAuthToken();
 
