@@ -27,6 +27,8 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    resetToken: String,
+    resetTokenExpiration: Date,
     blogs: {
       type: [
         {
@@ -76,5 +78,19 @@ const validateUser = (user) => {
   return schema.validate(user);
 };
 
+const validateResetDetails = (resetDetails) => {
+  const schema = Joi.object({
+    passwordToken: Joi.string().required(),
+    userId: Joi.string().required(),
+    newPassword: Joi.string()
+      .pattern(new RegExp("^[a-zA-Z0-9]{3,30}$"))
+      .required(),
+    confirmNewPassword: Joi.ref("newPassword"),
+  }).with("newPassword", "confirmNewPassword");
+
+  return schema.validate(resetDetails);
+};
+
 exports.User = User;
 exports.validateUser = validateUser;
+exports.validateResetDetails = validateResetDetails;

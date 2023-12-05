@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   try {
     const program = await Program.findById(id);
@@ -38,6 +38,7 @@ router.post("/", upload, admin, async (req, res) => {
     // Validate input data
     const { error, value } = validateProgram(req.body);
     if (error) return res.status(400).send(error.details[0].message);
+    const { programName, desc, anchor, userId } = value;
 
     // Check for existence of Program
     const program = await Program.findOne({ program: value.program });
@@ -51,11 +52,11 @@ router.post("/", upload, admin, async (req, res) => {
 
     // Create new program
     const newProgram = new Program({
-      program: value.program,
-      desc: value.desc,
-      anchor: value.anchor,
+      programName,
+      desc,
+      anchor,
       picURL: url,
-      userId: new Types.ObjectId(value.userId),
+      userId: new Types.ObjectId(userId),
     });
 
     // Save to database
@@ -71,25 +72,26 @@ router.post("/", upload, admin, async (req, res) => {
 });
 
 router.put("/:id", admin, async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   try {
     // Check for existence of program
     const program = await Program.findById(id);
     if (!program) return res.status(404).send("Program not found!.");
-
+    
     // Check for existence of input data
     if (!req.body) return res.status(400).send("No input set");
-
+    
     // Validate input data
     const { error, value } = validateProgram(req.body);
     if (error) return res.status(400).send(error.details[0].message);
+    const { programName, desc, picURL } = value;
 
     // Create updated program
     const updatedProgram = {
-      program: value.program,
-      desc: value.desc,
-      picUrl: value.picUrl,
+      programName,
+      desc,
+      picURL,
     };
 
     const savedProgram = await Program.updateOne(
@@ -105,7 +107,7 @@ router.put("/:id", admin, async (req, res) => {
 });
 
 router.delete("/:id", admin, async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   try {
     const program = await Program.findById(id);

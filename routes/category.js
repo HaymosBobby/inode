@@ -49,7 +49,7 @@ router.post("/", admin, async (req, res) => {
 });
 
 router.put("/:id", admin, async (req, res) => {
-  const id = req.params.id;
+  const {id} = req.params;
 
   try {
     // Check for existence of category
@@ -85,7 +85,7 @@ router.put("/:id", admin, async (req, res) => {
 });
 
 router.delete("/:id", admin, async (req, res) => {
-  const id = req.params.id;
+  const {id} = req.params;
 
   try {
     let category = await Category.findById(id);

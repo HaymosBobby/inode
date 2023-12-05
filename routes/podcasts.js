@@ -24,7 +24,7 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   try {
     const podcast = await Podcast.findById(id).populate("programId", "picURL");
@@ -48,6 +48,7 @@ router.post("/", upload, admin, async (req, res) => {
     const { error, value } = validatePodcast(req.body);
     if (error)
       return res.status(400).send({ message: error.details[0].message });
+    const { title, excerpt, programId, userId } = value;
 
     // Upload files to storage
     const file = req.file;
@@ -56,12 +57,12 @@ router.post("/", upload, admin, async (req, res) => {
 
     // Create new Podcast
     const newPodcast = new Podcast({
-      title: value.title,
-      excerpt: value.excerpt,
+      title,
+      excerpt,
       podcastURL: url,
       podcastSize: file.size,
-      programId: new Types.ObjectId(value.programId),
-      userId: new Types.ObjectId(value.userId),
+      programId: new Types.ObjectId(programId),
+      userId: new Types.ObjectId(userId),
     });
 
     // Save Podcast to database
@@ -77,7 +78,7 @@ router.post("/", upload, admin, async (req, res) => {
 });
 
 router.put("/:id", upload, admin, async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
   // console.log(req.body);
   // console.log(req.file);
 
@@ -94,6 +95,7 @@ router.put("/:id", upload, admin, async (req, res) => {
     const { error, value } = validatePodcast(req.body);
     if (error)
       return res.status(400).send({ message: error.details[0].message });
+    const { title, excerpt, programId, userId } = value;
 
     // Check for file
     let updatedPodcast;
@@ -111,21 +113,21 @@ router.put("/:id", upload, admin, async (req, res) => {
 
       // Create updated podcast
       updatedPodcast = {
-        title: value.title,
-        excerpt: value.excerpt,
+        title,
+        excerpt,
         podcastURL: url,
         podcastSize: file.size,
-        userId: new Types.ObjectId(value.userId),
-        programId: new Types.ObjectId(value.programId),
+        userId: new Types.ObjectId(userId),
+        programId: new Types.ObjectId(programId),
       };
     } else {
       updatedPodcast = {
-        title: value.title,
-        excerpt: value.excerpt,
+        title,
+        excerpt,
         podcastURL: podcast.podcastURL,
         podcastSize: podcast.size,
-        userId: new Types.ObjectId(value.userId),
-        programId: new Types.ObjectId(value.programId),
+        userId: new Types.ObjectId(userId),
+        programId: new Types.ObjectId(programId),
       };
     }
 
@@ -146,7 +148,7 @@ router.put("/:id", upload, admin, async (req, res) => {
 });
 
 router.delete("/:id", admin, async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   try {
     let podcast = await Podcast.findById(id);

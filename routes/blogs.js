@@ -25,7 +25,7 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   try {
     const blog = await Blog.findById(id).populate("userId", "username");
@@ -46,6 +46,7 @@ router.post("/", upload, admin, async (req, res) => {
     // Validate Input
     const { error, value } = validateBlog(req.body);
     if (error) return res.status(400).send(error.details[0].message);
+    const { title, excerpt, message, categories, userId } = value;
 
     // Upload files to storage
     let urls = [];
@@ -61,13 +62,13 @@ router.post("/", upload, admin, async (req, res) => {
 
     // Create new blog
     const newBlog = new Blog({
-      title: value.title,
-      excerpt: value.excerpt,
-      message: value.message,
-      categories: value.categories,
+      title,
+      excerpt,
+      message,
+      categories,
       picOneURL: urls[0],
       picTwoURL: urls[1],
-      userId: new Types.ObjectId(value.userId),
+      userId: new Types.ObjectId(userId),
     });
 
     // Save to Database
@@ -82,10 +83,7 @@ router.post("/", upload, admin, async (req, res) => {
 });
 
 router.put("/:id", upload, admin, async (req, res) => {
-  console.log(req.body);
-  console.log(req.files);
-  console.log(req.files.image2);
-  const id = req.params.id;
+  const { id } = req.params;
   try {
     // Check for existence of blog
     const blog = await Blog.findById(id);
@@ -97,6 +95,7 @@ router.put("/:id", upload, admin, async (req, res) => {
     // Validate Input
     const { error, value } = validateBlog(req.body);
     if (error) return res.status(400).send(error.details[0].message);
+    const { title, excerpt, message, categories, userId } = value;
 
     // Create updated blog
     let updatedBlog;
@@ -121,12 +120,13 @@ router.put("/:id", upload, admin, async (req, res) => {
       }
 
       updatedBlog = {
-        title: value.title,
-        excerpt: value.excerpt,
-        message: value.message,
+        title,
+        excerpt,
+        message,
+        categories,
         picOne: urls[0],
         picTwo: urls[1],
-        userId: new Types.ObjectId(value.userId),
+        userId: new Types.ObjectId(userId),
       };
     } else if (req.files && Object.entries(req.files).length === 1) {
       if (req.files.image1) {
@@ -141,12 +141,13 @@ router.put("/:id", upload, admin, async (req, res) => {
         await deleteFile(filePath);
 
         updatedBlog = {
-          title: value.title,
-          excerpt: value.excerpt,
-          message: value.message,
+          title,
+          excerpt,
+          message,
+          categories,
           picOne: url,
           picTwo: blog.picTwoURL,
-          userId: new Types.ObjectId(value.userId),
+          userId: new Types.ObjectId(userId),
         };
       } else {
         let file = req.files.image2[0];
@@ -159,22 +160,24 @@ router.put("/:id", upload, admin, async (req, res) => {
         await deleteFile(filePath);
 
         updatedBlog = {
-          title: value.title,
-          excerpt: value.excerpt,
-          message: value.message,
+          title,
+          excerpt,
+          message,
+          categories,
           picOne: blog.picOneURL,
           picTwo: url,
-          userId: new Types.ObjectId(value.userId),
+          userId: new Types.ObjectId(userId),
         };
       }
     } else {
       updatedBlog = {
-        title: value.title,
-        excerpt: value.excerpt,
-        message: value.message,
+        title,
+        excerpt,
+        message,
+        categories,
         picOne: blog.picOneURL,
         picTwo: blog.picTwoURL,
-        userId: new Types.ObjectId(value.userId),
+        userId: new Types.ObjectId(userId),
       };
     }
 
@@ -191,7 +194,7 @@ router.put("/:id", upload, admin, async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
   try {
     let blog = await Blog.findById(id);
 

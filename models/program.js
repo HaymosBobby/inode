@@ -6,7 +6,7 @@ const Program = model(
   "Program",
   new Schema(
     {
-      program: {
+      programName: {
         type: String,
         minlength: 3,
         maxlength: 100,
@@ -34,7 +34,7 @@ const Program = model(
 
 const validateProgram = (program) => {
   const schema = Joi.object({
-    program: Joi.string().min(3).max(100).required(),
+    programName: Joi.string().min(3).max(100).required(),
     anchor: Joi.string().required(),
     desc: Joi.string().min(3).max(100).required(),
     userId: Joi.objectId().required(),
