@@ -7,6 +7,8 @@ const { uploadFile, deleteFile } = require("../firebase/firebase");
 const { Types } = require("mongoose");
 const upload = require("../middleware/podcast_upload");
 
+const folder = "podcasts";
+
 router.get("/", async (req, res) => {
   try {
     const podcasts = await Podcast.find()
@@ -53,7 +55,7 @@ router.post("/", upload, admin, async (req, res) => {
     // Upload files to storage
     const file = req.file;
 
-    const url = await uploadFile(file, "podcasts");
+    const url = await uploadFile(file, folder);
 
     // Create new Podcast
     const newPodcast = new Podcast({
@@ -101,11 +103,10 @@ router.put("/:id", upload, admin, async (req, res) => {
     let updatedPodcast;
     if (req.file) {
       const file = req.file;
-      const url = await uploadFile(file, "podcasts");
+      const url = await uploadFile(file, folder);
 
       // Delete the old podcastURL from store
       const urlObj = new URL(podcast.podcastURL);
-      const folder = "podcasts";
       const fileName = decodeURIComponent(path.basename(urlObj.pathname));
       const filePath = `${folder}/${fileName}`;
 
@@ -160,7 +161,6 @@ router.delete("/:id", admin, async (req, res) => {
 
     // Delete the old podcastURL from store
     const urlObj = new URL(podcast.podcastURL);
-    const folder = "podcasts";
     const fileName = decodeURIComponent(path.basename(urlObj.pathname));
     const filePath = `${folder}/${fileName}`;
 

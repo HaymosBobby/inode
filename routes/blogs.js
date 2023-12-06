@@ -6,7 +6,7 @@ const { Types } = require("mongoose");
 const { uploadFile, deleteFile } = require("../firebase/firebase");
 const path = require("path");
 
-const folder = "postImages";
+const folder = "blogImages";
 
 router.get("/", async (req, res) => {
   try {
@@ -136,7 +136,6 @@ router.put("/:id", upload, admin, async (req, res) => {
         // Delete the old postURL from store
         const urlObj = new URL(blog.picOneURL);
         const fileName = decodeURIComponent(path.basename(urlObj.pathname));
-        const folder = "postImages";
         const filePath = `${folder}/${fileName}`;
         await deleteFile(filePath);
 
