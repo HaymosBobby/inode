@@ -30,6 +30,11 @@ app.use("/api/imedia-auth", auth);
 app.use("/api/imedia-categories", category);
 app.use("/api/test", test);
 
+app.use((error, req, res, next) => {
+  console.log("E", error);
+  res.status(500).send({ message: error.message });
+});
+
 const connect = async () => {
   try {
     await connection();

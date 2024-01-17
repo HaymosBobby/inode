@@ -13,7 +13,7 @@ module.exports = (req, res, next) => {
     req.user = decoded;
 
     if (
-      req.user._id.toString() === req.params.id.toString() ||
+      req.user._id.toString() === req.body.userId.toString() ||
       req.user.isAdmin
     ) {
       next();

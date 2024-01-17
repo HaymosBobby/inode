@@ -15,12 +15,12 @@ router.get("/", async (req, res) => {
       .sort("-createdAt");
 
     if (blogs && blogs.length <= 0)
-      return res.status(404).send("No Blogs found!.");
+      return res.status(404).send({ message: "No Blogs found!." });
 
     res.status(200).send({ data: blogs, message: "Success" });
   } catch (error) {
     res.status(500).send({ message: error.message, Error: error });
-    console.log(error.message);
+    console.log(error);
   }
 });
 
@@ -29,7 +29,7 @@ router.get("/:id", async (req, res) => {
 
   try {
     const blog = await Blog.findById(id).populate("userId", "username");
-    if (!blog) return res.status(404).send("No Blog found!.");
+    if (!blog) return res.status(404).send({ message: "No Blog found!." });
 
     res.status(200).send({ data: blog, message: "Success" });
   } catch (error) {

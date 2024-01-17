@@ -2,8 +2,10 @@ const router = require("express").Router();
 const { Program, validateProgram } = require("../models/program");
 const admin = require("../middleware/admin");
 const upload = require("../middleware/program_upload");
-const uploadFile = require("../firebase/firebase");
-const { Types } = require("mongoose");
+const { uploadFile, deleteFile } = require("../firebase/firebase");
+const { Types, startSession } = require("mongoose");
+const path = require("path");
+const folder = "programImages";
 
 router.get("/", async (req, res) => {
   try {
@@ -22,7 +24,8 @@ router.get("/:id", async (req, res) => {
 
   try {
     const program = await Program.findById(id);
-    if (!program) return res.status(404).send("Program not found!.");
+    if (!program)
+      return res.status(404).send({ message: "Program not found!." });
 
     res.status(200).send({ data: program, message: "Success!" });
   } catch (error) {
@@ -33,27 +36,28 @@ router.get("/:id", async (req, res) => {
 router.post("/", upload, admin, async (req, res) => {
   try {
     // Check for existence of input data
-    if (!req.body || !req.file) return res.status(400).send("No input set");
+    if (!req.body || !req.file)
+      return res.status(400).send({ message: "No input set" });
 
     // Validate input data
     const { error, value } = validateProgram(req.body);
-    if (error) return res.status(400).send(error.details[0].message);
-    const { programName, desc, anchor, userId } = value;
+    if (error) return res.status(400).send({ message: error.message });
+    const { programName, description, anchor, userId } = value;
 
     // Check for existence of Program
-    const program = await Program.findOne({ program: value.program });
+    const program = await Program.findOne({ programName });
 
     if (program)
       return res.status(200).send({ message: "Program already exists" });
 
     // Upload files to storage
     const file = req.file;
-    const url = await uploadFile(file, "programImages");
+    const url = await uploadFile(file, folder);
 
     // Create new program
     const newProgram = new Program({
       programName,
-      desc,
+      description,
       anchor,
       picURL: url,
       userId: new Types.ObjectId(userId),
@@ -71,39 +75,71 @@ router.post("/", upload, admin, async (req, res) => {
   }
 });
 
-router.put("/:id", admin, async (req, res) => {
+router.put("/:id", upload, admin, async (req, res) => {
   const { id } = req.params;
+  // const session = await startSession();
+  // session.startTransaction();
 
   try {
     // Check for existence of program
     const program = await Program.findById(id);
-    if (!program) return res.status(404).send("Program not found!.");
-    
+    if (!program)
+      return res.status(404).send({ message: "Program not found!." });
+
     // Check for existence of input data
-    if (!req.body) return res.status(400).send("No input set");
-    
+    if (!req.body) return res.status(400).send({ message: "No input set" });
+
     // Validate input data
     const { error, value } = validateProgram(req.body);
-    if (error) return res.status(400).send(error.details[0].message);
-    const { programName, desc, picURL } = value;
+    if (error) return res.status(400).send({ message: error.message });
+    const { programName, description } = value;
 
     // Create updated program
-    const updatedProgram = {
-      programName,
-      desc,
-      picURL,
-    };
+    let updatedProgram;
+    if (req.file) {
+      const file = req.file;
+      const url = await uploadFile(file, folder);
+
+      // Delete the old picUrl from store
+      const urlObj = new URL(program.picURL);
+      const fileName = decodeURIComponent(path.basename(urlObj.pathname));
+      const filePath = `${folder}/${fileName}`;
+
+      await deleteFile(filePath);
+
+      // Create updated program.
+      updatedProgram = {
+        programName,
+        description,
+        picURL: url,
+      };
+    } else {
+      updatedProgram = {
+        programName,
+        description,
+        picURL: program.picURL,
+      };
+    }
 
     const savedProgram = await Program.updateOne(
       { _id: id },
       { $set: updatedProgram }
     );
+    // .session(session);
 
-    res.status(200).send({ data: savedProgram, messae });
+    // await session.commitTransaction();
+
+    res
+      .status(200)
+      .send({ data: savedProgram, message: "Program updated successfully!" });
   } catch (error) {
+    // await session.abortTransaction();
     res.status(500).send({ Error: error, message: error.message });
     console.log(error);
   }
+  // finally {
+  //   session.endSession();
+  // }
 });
 
 router.delete("/:id", admin, async (req, res) => {
@@ -113,6 +149,12 @@ router.delete("/:id", admin, async (req, res) => {
     const program = await Program.findById(id);
 
     if (!program) return res.status(404).send("Program not found");
+
+    const urlObj = new URL(program.picURL);
+    const fileName = decodeURIComponent(path.basename(urlObj.pathname));
+    const filePath = `${folder}/${fileName}`;
+
+    await deleteFile(filePath);
 
     const deletedProgram = await Program.findByIdAndDelete(id);
 

@@ -12,7 +12,7 @@ const Program = model(
         maxlength: 100,
         required: true,
       },
-      desc: {
+      description: {
         type: String,
         minlength: 3,
         maxlength: 100,
@@ -36,7 +36,7 @@ const validateProgram = (program) => {
   const schema = Joi.object({
     programName: Joi.string().min(3).max(100).required(),
     anchor: Joi.string().required(),
-    desc: Joi.string().min(3).max(100).required(),
+    description: Joi.string().min(3).max(100).required(),
     userId: Joi.objectId().required(),
   });
 

@@ -12,7 +12,10 @@ const folder = "podcasts";
 router.get("/", async (req, res) => {
   try {
     const podcasts = await Podcast.find()
-      .populate("programId", "picURL")
+      .populate([
+        { path: "programId", select: "picURL anchor" },
+        { path: "userId", select: "username" },
+      ])
       .sort("-createdAt");
 
     if (podcasts && podcasts.length <= 0)

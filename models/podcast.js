@@ -28,6 +28,11 @@ const Podcast = mongoose.model(
         type: Number,
         required: true,
       },
+      active: {
+        type: Boolean,
+        default: false,
+        required: true,
+      },
       programId: {
         type: mongoose.Types.ObjectId,
         ref: "Program",

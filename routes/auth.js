@@ -78,9 +78,7 @@ router.post("/login", async (req, res) => {
     const decryptedPassword = await bcrypt.compare(password, user.password);
 
     if (!decryptedPassword)
-      return res
-        .status(401)
-        .send({ message: "Invalid Username or Password!" });
+      return res.status(401).send({ message: "Invalid Username or Password!" });
 
     const token = user.generateAuthToken();
 
@@ -141,7 +139,7 @@ router.post("/reset-password", async (req, res) => {
   const info = await transporter.sendMail(mailOptions);
   console.log(info);
 
-  res.status(200).send({ message: info.message });
+  res.status(200).send({ data: updatedUser, message: info.message });
 });
 
 router.get("/reset-password/:token", async (req, res) => {
